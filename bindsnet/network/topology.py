@@ -162,13 +162,20 @@ class Connection(AbstractConnection):
             if self.wmin != -np.inf or self.wmax != np.inf:
                 w = torch.clamp(torch.as_tensor(w), self.wmin, self.wmax)
 
-        self.w = Parameter(w, requires_grad=False)
-
         b = kwargs.get("b", None)
-        if b is not None:
-            self.b = Parameter(b, requires_grad=False)
+
+        if self.target.output and self.target.backprop:
+            self.w = Parameter(w, require_grad=True)
+            if b is not None:
+                self.b = Parameter(b, requires_grad=True)
+            else:
+                self.b = None
         else:
-            self.b = None
+            self.w = Parameter(w, require_grad=False)
+            if b is not None:
+                self.b = Parameter(b, requires_grad=False)
+            else:
+                self.b = None
 
         if isinstance(self.target, CSRMNodes):
             self.s_w = None

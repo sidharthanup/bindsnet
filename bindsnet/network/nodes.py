@@ -22,6 +22,10 @@ class Nodes(torch.nn.Module):
         trace_scale: Union[float, torch.Tensor] = 1.0,
         sum_input: bool = False,
         learning: bool = True,
+        output: bool = False,
+        backprop: bool = False,
+        pdf_time_constant: Union[float, torch.Tensor] = 1,
+        pdf_scale: Union[float, torch.Tensor] = 1,
         **kwargs,
     ) -> None:
         # language=rst
@@ -36,6 +40,8 @@ class Nodes(torch.nn.Module):
         :param trace_scale: Scaling factor for spike trace.
         :param sum_input: Whether to sum all inputs.
         :param learning: Whether to be in learning or testing.
+        :param output: Whether this is the output layer of nodes.
+        :param backprop: Whether to allow backpropagation.
         """
         super().__init__()
 
@@ -85,6 +91,11 @@ class Nodes(torch.nn.Module):
         self.batch_size = None
         self.trace_decay = None
         self.learning = learning
+        self.backprop = backprop
+        self.output = output
+        if self.backprop:
+            self.pdf_time_constant = pdf_time_constant
+            self.pdf_scale = pdf_scale
 
     @abstractmethod
     def forward(self, x: torch.Tensor) -> None:
@@ -106,6 +117,13 @@ class Nodes(torch.nn.Module):
         if self.sum_input:
             # Add current input to running sum.
             self.summed += x.float()
+
+    def backprop(self, gradOutput):
+        pdfTimeConstant = self.tau_rho * self.theta
+        spikePdf = self.pdfScale / pdfTimeConstant * torch.exp(-torch.abs(self.v - self.theta) / pdfTimeConstant)
+
+        # return gradOutput, None, None, None # This seems to work better!
+        return gradOutput * spikePdf, None, None, None
 
     def reset_state_variables(self) -> None:
         # language=rst

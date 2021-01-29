@@ -114,7 +114,7 @@ class Network(torch.nn.Module):
         else:
             self.reward_fn = None
 
-    def add_layer(self, layer: Nodes, name: str) -> None:
+    def add_layer(self, layer: Nodes, name: str, output: True) -> None:
         # language=rst
         """
         Adds a layer of nodes to the network.
@@ -343,6 +343,17 @@ class Network(torch.nn.Module):
 
                 break
 
+        if outputs != {}:
+            if len(inputs[key].size()) == 1:
+                # current shape is [n_0, ...]
+                # unsqueeze twice to make [1, 1, n_0, ...]
+                outputs = outputs.unsqueeze(0).unsqueeze(0)
+            elif len(inputs[key].size()) == 2:
+                # current shape is [time, n_0, ...]
+                # unsqueeze dim 1 so that we have
+                # [time, 1, n_0, ...]
+                outputs = outputs.unsqueeze(1)
+
         # Effective number of timesteps.
         timesteps = int(time / self.dt)
 
@@ -393,6 +404,10 @@ class Network(torch.nn.Module):
                         self.layers[l].v += inject_v
                     else:
                         self.layers[l].v += inject_v[t]
+
+                if layers[l].output and layer[l].backprop:
+                    pred_loss = loss(self.layers[l].s, outputs)
+                    self.pred_loss.backward()
 
             # Run synapse updates.
             for c in self.connections:

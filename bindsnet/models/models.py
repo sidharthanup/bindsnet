@@ -64,6 +64,8 @@ class TwoLayerNetwork(Network):
                 refrac=5,
                 tc_decay=100.0,
                 tc_trace=20.0,
+                backprop=True,
+                output=True,
             ),
             name="Y",
         )
@@ -74,7 +76,6 @@ class TwoLayerNetwork(Network):
                 source=self.layers["X"],
                 target=self.layers["Y"],
                 w=w,
-                update_rule=PostPre,
                 nu=nu,
                 reduction=reduction,
                 wmin=wmin,
